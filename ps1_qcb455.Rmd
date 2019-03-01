@@ -1,0 +1,279 @@
+---
+title: "PS1_QCB455"
+author: "mg25"
+date: "October 7, 2018"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+```{r}
+#1.1
+getwd()
+Differentialorfs <- read.table("c:/Users/MD/Documents/differentially_expressed_orfs.txt", header = FALSE)
+dim(Differentialorfs)
+norepeats <- unique(Differentialorfs, incomparables = FALSE)
+dim(norepeats)
+repeated <- duplicated(Differentialorfs)
+whattrue <- which(repeated)
+```
+1A) The list of differentially expressed genes was not unique. After finding the indices of Differentialorfs that were true (put into whattrue), I went in and located those values in
+Differentialorfs.
+YLL006W
+YDL069C
+YKL016C
+YJL116W
+YLL006W
+
+So YLL006W is repeated twice here.
+```{r}
+#1.2: this loop will count the number of unique elements in pos-orfs
+Positiveorfs <- read.table("c:/Users/MD/Documents/positive_orfs.txt")
+dim(Positiveorfs)
+counter = 0
+dim_norepeats = dim(norepeats)
+dim_posorfs = dim(Positiveorfs)
+for (i in 1:dim_norepeats[1]) { 
+  for (j in 1:dim_posorfs[1]) {
+  if (norepeats[i,1] == Positiveorfs[j,1]){
+     counter = counter + 1
+  }
+}
+}
+print(counter)
+```
+2A) The list of differentially-expressed genes is 166. Out of these, 25 also appear in our own list.
+
+
+``` {r}
+# this loop will go through the list of no-repeat genes and sets truepositives
+# to all the matches with the list of positive genes. Precision is calculated
+# as the number of truepositives divided by the number of elements in 
+# the norepeats gene at each threshold of p. Recall at each point is the 
+# the number of truepositive results (genes in our list that match the
+# list of known genes) divided by the total number of known expressed genes.
+precisionvec <- numeric(0)
+recallvec <- numeric(0)
+falsepositives = 0
+truepositives = 0
+length = dim_posorfs[1]
+for (i in 1:dim_norepeats[1]){
+  for (j in 1:length) {
+    if (norepeats[i,1] == Positiveorfs[j,1]){
+      truepositives = truepositives + 1
+      break 
+    }
+}
+  precision = truepositives / (i)
+  precisionvec = c(precisionvec, precision)
+  
+  recall = truepositives / length
+  recallvec = c(recallvec, recall)
+}
+plot(precisionvec, recallvec, main = "Precision vs recall", xlab = "Precision",
+     ylab = "Recall")
+```
+
+2)10% recall corresponds to around 50% precision.
+3) It is not recapitulating the known data properly. The recall rate is extraordinarily low, especially at high precision rates. This means
+that not many of the genes in the list of known expressed genes are being
+captured accurately by our experiment (though we have a fairly large subset of unique genes, 121 in size, not many of them match the list of known expressed genes from positive_orfs).
+
+#2 (t-tests)
+```{r}
+#-----------------------------------------------------------------------------------#
+trial1 = rpois(4,10)
+tableresults = table(trial1)
+View(tableresults)
+trial5=rpois(4,50)
+tableresults = table(trial1)
+View(tableresults)
+mean1 = mean(trial1)
+var1 = var(trial1)
+mean2 = mean(trial5)
+var2 = var(trial5)
+mean1
+var1
+mean2
+var2
+#tstatistic
+tstatistic = (mean1 - mean2) / (var1*var1 + var2 * var2)^(.5) * (100)^(.5)
+tstatistic
+pvalueonesided = pt(tstatistic, 2*(100-1))
+#multiply this value by 2, since two sided p value is twice the one sided value#
+pvaluetwosided = 2 * pvalueonesided
+pvaluetwosided
+```
+The size of the p-value indicates there is a significant difference between the average value of the distributions when lambda is 10 and when lambda is 50. We can reject the null hypothesis.
+
+```{r}
+#Part 4
+trial1 = rpois(4,10)
+tableresults = table(trial1)
+View(tableresults)
+trial5 = rpois(4,10)
+mean1 = mean(trial1)
+var1 = var(trial1)
+mean2 = mean(trial5)
+var2 = var(trial5)
+mean1
+var1
+mean2
+var2
+tstatistic = (mean1 - mean2) / (var1*var1 + var2 * var2)^(.5) * (100)^(.5)
+tstatistic
+pvalueonesided = pt(tstatistic, 2*(100-1))
+#multiply this value by 2, since two sided p value is twice the one sided value#
+if (pvalueonesided < .5)
+  pvaluetwosided = 2 * pvalueonesided
+if (pvalueonesided > .5)
+  pvaluetwosided = (1 - pvalueonesided) * 2
+pvaluetwosided
+```
+Because in this case, the two-sided p value is far greater than any level of significance we can reasonably establish our experiment at, we cannot reject the null hypothesis and conclude that there is no difference in the average value of the two poisson distributions at lambda - 10 (as we should expect, as these are the same distributions)
+
+```{r}
+#Part 5
+pvalueonesided = pt(3.5,2*(100-1))
+if (pvalueonesided < .5)
+  pvaluetwosided = 2 * pvalueonesided
+if (pvalueonesided > .5)
+  pvaluetwosided = (1 - pvalueonesided) * 2
+pvaluetwosided
+```
+3) 
+```{r}
+# The following piece of code takes in the data containing all the simulated
+# p values and subsets them into the null values and the alternative values.
+# Plots each.
+getwd()
+sim_pvalues <- read.table("c:/Users/MD/Documents/sim-pvals.txt", header = TRUE)
+nullpvalues <- subset(sim_pvalues, null == 1, select = c(pval,null))
+alternativepval <- subset(sim_pvalues, null == 0, select = c(pval,null))
+sizetotal = dim(sim_pvalues)[1]
+sizenull = dim(nullpvalues)[1]
+proportion = sizenull / sizetotal
+proportion
+hist(nullpvalues$pval, main = "Null P-Value distribution", xlab = "P-value")
+hist(alternativepval$pval, main = "Alternative p-value distr", xlab = "p-value")
+```
+The proportion we calculated was 0.9.
+We expect no pattern in the distribution of our null p values, as those indicate no relationship between the variables. As expected, the histogram seems to be fairly uniform across all pvalues. In contrast, our alternative pvalues are extremely skewed towards 0, with little to no elements located in buckets outside the first 2. This indicates that the alternative hypothesis in these cases could indeed be true, since the peak of pvalues at 0 is so high.
+```{r}
+hist(sim_pvalues$pval, freq = FALSE)
+abline(h = proportion)
+```
+3.4) Pi_o means the proportion of tests here that are condition-negative, i.e. where the null hypothesis is deemed true. The boxes rising above pi_o
+correspond to conditions where the alternative hypothesis proved valid.
+3.5) We should eliminate the buckets that have particularly high peaks (in this case, perhaps the 2-3 buckets closest to 0.0). Average the density of the rest of the pvalues to obtain a rough estimate of pi_o.
+```{r}
+#3.6. Go through loop. For each value/threshold of p we can find the count
+# of pvalues less than the threshold and plug into the formula and find
+# the qvalue
+qval <- numeric(0)
+totalnum = dim(sim_pvalues)
+for (i in 1:totalnum[1]) {
+  pcurrent = sim_pvalues[i,1]
+  lessthan <- subset(sim_pvalues, pval < pcurrent, c(pval,null))
+  number = dim(lessthan)[1]
+  qvalue = pcurrent * totalnum[1] * proportion / number
+  qval = c(qval, qvalue)
+}
+plot(sim_pvalues$pval, qval, main = "P values vs Q values, unadjusted",
+     xlab = "pvalues", ylab = "qvalues")
+```
+```{r}
+# this is the adjusted qvalues, so that there are no dips in the curves.
+# we reverse-sort the data and adjust the data so that, when going in order
+# of the sort, it is monotonically decreasing
+q = qval
+p = sim_pvalues$pval
+merged = data.frame(p,q)
+merged = merged[order(-merged$p),] 
+for (i in 1:(totalnum[1]-1)) {
+  if (merged$q[i+1] > merged$q[i]){
+    merged$q[i+1] = merged$q[i]
+  }
+  if (merged$q[i]  >= 1)
+  {
+    merged$q[i] = 1
+  }
+}
+plot(merged$p, merged$q, main = "Adjusted p and q", xlab = "sorted p", ylab = "Adjusted q")
+```
+3.7) m is the number of total tests/counts. Pi_0 is the proportion of those that are also conditional negative/ follow the null hypothesis. If we multiply that by the p value, which is defined as the percentage of conditional negatives that would appear as discoveries/alternative hypothesis at a certain threshold p, we end up with the total number of conditional negative conditions that happen to be marked as following the alternative hypothesis: a.k.a. false discoveries, at that specific threshold of p we are choosing.
+The denominator is the number of total discoveries we make, or tests/counts that we see as following the alternative hypothesis. After all, it's measuring the count of all the tests where the p value is less than our threshold: a.k.a. all tests/counts we measure as significant/not conditional negatives. 
+Thus the ratio we see is # of false discoveries / (# of true discoveries) is thus called the FDR.
+
+3.8)
+```{r}
+plot(merged$p, merged$q, main = "Adjusted p and q", xlab = "sorted p", ylab = "Adjusted q")
+```
+We graphed the graph as above. The relationship is hyperbolic, where the qvalues
+level off as p increases. 
+```{r}
+maxpos = max(merged$q)
+maxpos
+```
+Here, you see the maximum q value is around equal to the pi_0 value(.9). This is because, if you set the threshold to p = 1 (the maximum p value), you can expect (1-pi_0) proportion of them to be true. So even if you mark every result you receive as a discovery, the percentage of false discoveries is bounded by your pi_0 value
+```{r}
+#3.9 and 3.10 use the qvalue package to plot qval vs pval
+source("https://bioconductor.org/biocLite.R")
+biocLite("qvalue")
+library(qvalue)
+qvaluenew <- qvalue(sim_pvalues$pval)
+plot(qval, qvaluenew$qvalues)
+x  = c(0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1)
+y1 = c(0,.1,.2,.3,.4,.5,.6,.7,.8,.9,1)
+lines(x,y1)
+```
+The pi_0 was still around 0.9 still. The values differ at the upper end of the qvalue. The slope of the regression is slightly higher than the 1 of y = x, which indicates that our manual qvalues are underestimating the package qvalues. This is because our manual calculation is simply an estimate or baseline: the actual FDR may be higher, since there may be simply by chance more false positives, tests deemed significant that are still part of the conditional negative.
+
+4)
+```{r}
+# this part of the code reads in the test results from RMA
+assays <- read.table("c:/Users/MD/Documents/RMA_Dataset.txt", header = TRUE)
+lengthrow = dim(assays)[2]-1
+halved = lengthrow/2
+lengthcolumn = dim(assays)[1]
+mat <- matrix(data = NA, lengthcolumn, lengthrow/2)
+# we will basically average columns in conjunction, which is why we only go to
+# half the column number in the loop. We will average the results of the  appropriate assay in each corresponding column
+for (i in 1:halved){
+  for (j in 1:(lengthcolumn)){
+    a = 2*i
+    b = a+1
+    mat[j,i] = (assays[j,a] + assays[j,b])/2
+  }
+}
+#4.2: reading in genotypes. Then reading in each value from the averaged matrix,
+# we can extract the row and run regression.
+genotypes <- read.table("c:/Users/MD/Documents/Genotypes.txt", header = TRUE)
+newgenotype <- genotypes[,2]
+pvec <- matrix(0,lengthcolumn,1)
+for (i in 1:(lengthcolumn)){
+    newrow <- mat[i,]
+    newfit <- aov(newrow~newgenotype)
+    p <- summary(newfit)[[1]][["Pr(>F)"]][[1]]
+    pvec[i,1] = p
+}
+pindex = which.min(pvec)
+pindex
+besttest = assays[pindex,1]
+besttest
+```
+4.2) By minding the minimum pvalue, we found the test which had the minimum value was 203378_at. 
+4.3) The two main problems are low power (there are only 16 total people tested, low sample number) that mean significantly higher probability of randomness affecting our results, as well as confounding variables besides the genotype of that one gene between each such group that may be influencing the output of the test results (such as perhaps other genetic markers that differ between the two group. To make the test more robust: increase the number of people tested and try to limit the genetic variation between subjects as much as possible as to hone in on the effect of that one CC, CT, or TT allele.
+
+
+4)
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
